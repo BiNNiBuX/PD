@@ -1,8 +1,10 @@
 var canvasContext = canvas.getContext("2d");
-//Раздел переменных
-var maxEnemies = 2;
+
+{//Раздел переменных
+
 var Enemies = [];
 var Objects = [];
+var collObj = 0;
 var missionStartX;
 var missionStartY;
 var backGroundPic = new Image();
@@ -16,9 +18,12 @@ const maxSpeedX = 8;
 const maxSpeedY = 20;
 const EntityWidth = 70;
 const EntityHeight = 180;
-const NumOfObjects = 1;
-//Конец раздела переменных
-//Раздел объектов
+const NumOfObjects = 2;
+const maxEnemies = 2;
+
+}//Конец раздела переменных
+
+{//Раздел объектов
 
 var mission = {
     Width: screenWidth * 3,
@@ -36,17 +41,11 @@ var player = {
     left: 0,
     right: 0,
 }
-//Конец раздела объектов
 
-function setWindow(){
-    if ((document.fullscreenEnabled === true) && (document.fullscreenElement === null)) {
-        document.documentElement.requestFullscreen() //Полноэкранный режим
-    }
-    canvas.width = screenWidth; //Ширина карты окна
-    canvas.height = screenHeight //Высота карты окна
-}
+}//Конец раздела объектов
 
-//Раздел ивентов
+{//Раздел ивентов
+
 function initEventListeners() {
     window.addEventListener("mousemove", onmousemove);
     window.addEventListener("click", mouseclick);
@@ -74,7 +73,7 @@ function keyDown(event) {
             player.left = 1;
             break;
         case up: 
-            if ((player.Y >= screenHeight - player.Height) || (isOnSurfaceF() != "false")) {
+            if ((player.Y >= screenHeight - player.Height)) {
                 player.SpeedY = maxSpeedY
             }
     }
@@ -100,38 +99,23 @@ function keyUp(event) {
             break
     }
 }
-//Конец раздела ивентов
 
-function drawMap(){
-    
+}//Конец раздела ивентов
+
+
+{//Раздел отрисовки
+
+function drawFrame() {
+    drawBackground();
+    drawPlayer();
+    drawEnemies();
+    drawAllObjects();
 }
 
 function drawAllObjects(){
     canvasContext.fillStyle = "white";
     for (let i=0; i<NumOfObjects; i++){
         canvasContext.fillRect(Objects[i].X, Objects[i].Y, Objects[i].Width, Objects[i].Height)
-    }
-}
-
-function initObjects(){
-    for (let i=0; i<NumOfObjects; i++){
-        Objects[i] = {
-            X: 100 * i * 4,
-            Y: 1080 - 400,
-            Width: 200,
-            Height: 20,
-        }   
-    }
-}
-
-function initEnemies(){
-    for (let i = 0; i < maxEnemies; i++){
-        Enemies[i] = {
-            X: 250 * i,
-            Y: 1080 - 180,
-            Width: EntityWidth,
-            Height: EntityHeight,
-        }
     }
 }
 
@@ -152,57 +136,112 @@ function drawEnemies() {
     }
 }
 
-function drawFrame() {
-    drawBackground();
-    drawPlayer();
-    drawEnemies();
-    drawAllObjects();
+}//Конец раздела отрисовки
+
+function setWindow(){
+    if ((document.fullscreenEnabled === true) && (document.fullscreenElement === null)) {
+        document.documentElement.requestFullscreen() //Полноэкранный режим
+    }
+    canvas.width = screenWidth; //Ширина карты окна
+    canvas.height = screenHeight //Высота карты окна
 }
 
-function isOnSurfaceF() {
-    if (player.Y + player.Height < screenHeight) {
-        for(let i=0;i<NumOfObjects;i++){
-            if ((player.Y + player.Height >= Objects[i].Y) && (player.Y + player.Height - Objects[i].Height <= Objects[i].Y)){
-                if (((player.X + player.Width) > Objects[i].X) && (player.X < (Objects[i].X + Objects[i].Width))){
-                    return(i)
+function initObjects(){
+    for (let i=0; i<NumOfObjects; i++){
+        Objects[i] = {
+            X: 100 * i * 4,
+            Y: 1080 - 400,
+            Width: 200,
+            Height: 300,
+        }   
+    }
+}
+
+function initEnemies(){
+    for (let i = 0; i < maxEnemies; i++){
+        Enemies[i] = {
+            X: 250 * i,
+            Y: 1080 - 180,
+            Width: EntityWidth,
+            Height: EntityHeight,
+        }
+    }
+}
+
+function isCollision() {
+    for (let i=0; i < NumOfObjects; i++){
+        if ((player.Y + player.Height >= Objects[i].Y) && (player.Y <= Objects[i].Y + Objects[i].Height)){
+            if ((player.X + player.Width >= Objects[i].X) && (player.X <= Objects[i].X + Objects[i].Width)){
+                collObj = i;
+                return(true)
+            }
+        }
+    }
+    return(false)
+}
+
+function playerMoveX(){
+    if (player.SpeedX < 0) {
+        for (i = player.SpeedX; i != 0; i+=1) {
+            if (!isCollision()){
+                for (j = 0; j < maxEnemies; j++){
+                    Enemies[j].X++
+                }
+                for (j = 0; j < NumOfObjects; j++){
+                    Objects[j].X++
                 }
             }
         }
-        return("false")
-    } else return("onFloor")
-}
-
-function playerMove() {
-    player.Y -= player.SpeedY;
-    let isOnSurface = isOnSurfaceF();
-    for (let i = 0; i < maxEnemies; i++){
-        Enemies[i].X -= player.SpeedX;
     }
-    for (let i = 0; i < NumOfObjects; i++){
-        Objects[i].X -= player.SpeedX
-    }
-    for (i=0;i<NumOfObjects;i++){
-        if ((player.Y <= Objects[i].Y + Objects[i].Height / 1.5) && (player.Y >= Objects[i].Y)) {
-            if (((player.X + player.Width) > Objects[i].X) && (player.X < (Objects[i].X + Objects[i].Width))) {
-                player.SpeedY = 0
+    if (player.SpeedX > 0) {
+        for (i = player.SpeedX; i != 0; i-=1) {
+            if (!isCollision()){
+                for (j = 0; j < maxEnemies; j++){
+                    Enemies[j].X--
+                }
+                for (j = 0; j < NumOfObjects; j++){
+                    Objects[j].X--
+                }
             }
         }
     }
-    if (isOnSurface === "onFloor") {
-        player.Y = screenHeight - player.Height
-        player.SpeedY = 0
-    } 
-    else {
-        if (isOnSurface === "false") {
-            player.SpeedY -= 0.5
-        } 
-        else {
-            player.Y = Objects[isOnSurface].Y - player.Height
-            player.SpeedY = 0
+    if (isCollision()) {
+        if (player.SpeedX < 0) {
+            for (i = player.SpeedX; i != 0; i+=1) {
+                for (j = 0; j < maxEnemies; j++){
+                    Enemies[j].X-=0.25
+                }
+                for (j = 0; j < NumOfObjects; j++){
+                    Objects[j].X-=0.25
+                }
+            }
         }
-    }    
+        if (player.SpeedX > 0) {
+            for (i = player.SpeedX; i != 0; i-=1) {
+                for (j = 0; j < maxEnemies; j++){
+                    Enemies[j].X+=0.25
+                }
+                for (j = 0; j < NumOfObjects; j++){
+                    Objects[j].X+=0.25
+                }
+            }
+        } 
+    }
 }
-//(((player.Y + player.Height) < Objects[i].Y) && (((player.X + player.Width) > Objects[i].X) && (player.X < (Objects[i].X + Objects[i].Width))))
+
+function playerMoveY(){
+    player.Y -= player.SpeedY;
+    if (player.Y + player.Height >= screenHeight) {
+        player.Y = screenHeight - player.Height
+        player.SpeedY = 0;
+    } else player.SpeedY -= 0.5
+    player.Y -= player.SpeedY
+}
+
+function playerMove() {
+    playerMoveY()
+    playerMoveX()
+}
 
 function updateFrame() {
     //Тут потом будут двигаться крипы
