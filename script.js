@@ -1,14 +1,4 @@
 var canvasContext = canvas.getContext("2d");
-
-{//Раздел переменных
-
-var Enemies = [];
-var Objects = [];
-var collObj = 0;
-var missionStartX;
-var missionStartY;
-var backGroundPic = new Image();
-backGroundPic.src = 'images/back.jpg'
 const screenWidth = window.screen.width;
 const screenHeight = window.screen.height ;
 const left = 'a';
@@ -18,8 +8,19 @@ const maxSpeedX = 8;
 const maxSpeedY = 20;
 const EntityWidth = 70;
 const EntityHeight = 180;
-const NumOfObjects = 2;
+const NumOfObjects = 10;
 const maxEnemies = 2;
+
+{//Раздел переменных
+
+var Enemies = [];
+var Objects = [];
+var collObj = 0;
+var onObj = 0;
+var missionStartX;
+var missionStartY;
+var backGroundPic = new Image();
+backGroundPic.src = 'images/back.jpg'
 
 }//Конец раздела переменных
 
@@ -73,7 +74,7 @@ function keyDown(event) {
             player.left = 1;
             break;
         case up: 
-            if ((player.Y >= screenHeight - player.Height)) {
+            if ((isOnFloor() === "floor") || (isOnFloor() === "object")) {
                 player.SpeedY = maxSpeedY
             }
     }
@@ -138,35 +139,45 @@ function drawEnemies() {
 
 }//Конец раздела отрисовки
 
-function setWindow(){
-    if ((document.fullscreenEnabled === true) && (document.fullscreenElement === null)) {
-        document.documentElement.requestFullscreen() //Полноэкранный режим
-    }
-    canvas.width = screenWidth; //Ширина карты окна
-    canvas.height = screenHeight //Высота карты окна
-}
+{//Раздел генерации и установок
 
-function initObjects(){
-    for (let i=0; i<NumOfObjects; i++){
-        Objects[i] = {
-            X: 100 * i * 4,
-            Y: 1080 - 400,
-            Width: 200,
-            Height: 300,
-        }   
+    function initAll() {
+        initObjects();
+        initEnemies()
     }
-}
 
-function initEnemies(){
-    for (let i = 0; i < maxEnemies; i++){
-        Enemies[i] = {
-            X: 250 * i,
-            Y: 1080 - 180,
-            Width: EntityWidth,
-            Height: EntityHeight,
+    function initObjects(){
+        for (let i=0; i<NumOfObjects; i++){
+            Objects[i] = {
+                X: 100 * i * 4,
+                Y: 1080 - 400,
+                Width: 200,
+                Height: 20,
+            }   
         }
     }
-}
+    
+    function initEnemies(){
+        for (let i = 0; i < maxEnemies; i++){
+            Enemies[i] = {
+                X: 250 * i,
+                Y: 1080 - 180,
+                Width: EntityWidth,
+                Height: EntityHeight,
+            }
+        }
+    }
+
+    function setWindow(){
+        if ((document.fullscreenEnabled === true) && (document.fullscreenElement === null)) {
+            document.documentElement.requestFullscreen() //Полноэкранный режим
+        }
+        canvas.width = screenWidth; //Ширина карты окна
+        canvas.height = screenHeight //Высота карты окна
+    }
+
+}//Конец раздела генерации и установок
+
 
 function isCollision() {
     for (let i=0; i < NumOfObjects; i++){
@@ -178,6 +189,25 @@ function isCollision() {
         }
     }
     return(false)
+}
+
+function isOnFloor() {
+    if (player.Y + player.Height >= screenHeight) {
+        return("floor")
+    } else {
+        for (i = 0; i < NumOfObjects; i++) {
+            if ((player.Y + player.Height > Objects[i].Y - 0.11) && (player.Y < Objects[i].Y)){
+                if (((player.X + player.Width >= Objects[i].X) && (player.X <= Objects[i].X + Objects[i].Width))) {
+                    return("object")
+                }
+            }
+        }
+    }
+}
+
+function playerMove() {
+    playerMoveY()
+    playerMoveX()
 }
 
 function playerMoveX(){
@@ -230,17 +260,29 @@ function playerMoveX(){
 }
 
 function playerMoveY(){
-    player.Y -= player.SpeedY;
-    if (player.Y + player.Height >= screenHeight) {
-        player.Y = screenHeight - player.Height
-        player.SpeedY = 0;
-    } else player.SpeedY -= 0.5
+    console.log(isOnFloor())
+    console.log(player.SpeedY)
     player.Y -= player.SpeedY
-}
-
-function playerMove() {
-    playerMoveY()
-    playerMoveX()
+    if (player.SpeedY > 0) {
+        if (isOnFloor() === "object") {
+            player.Y = Objects[onObj].Y + Objects[onObj].Height + 1
+            player.SpeedY = 0;
+        } else {
+            player.SpeedY -= 0.5 
+        }
+    } else {
+        if (isOnFloor() === "floor"){
+            player.Y = screenHeight - player.Height
+            player.SpeedY = 0;
+        } else {
+            if (isOnFloor() === "object") {
+                player.Y = Objects[onObj].Y - player.Height - 0.1
+                player.SpeedY = 0;
+            } else {
+                player.SpeedY -= 0.5 
+            }
+        }
+    }
 }
 
 function updateFrame() {
@@ -255,7 +297,6 @@ function play() {
     requestAnimationFrame(play)
 }
 
-initObjects();
-initEnemies()
-play()
+initAll();
+play();
 initEventListeners()
