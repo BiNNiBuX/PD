@@ -152,7 +152,7 @@ function drawEnemies() {
                 X: 100 * i * 4,
                 Y: 1080 - 400,
                 Width: 200,
-                Height: 20,
+                Height: 300,
             }   
         }
     }
