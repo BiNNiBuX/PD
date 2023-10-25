@@ -152,9 +152,10 @@ function drawEnemies() {
                 X: 100 * i * 4,
                 Y: 1080 - 400,
                 Width: 200,
-                Height: 300,
+                Height: 30,
             }   
         }
+        Objects[1]. Y = 1080 - 500
     }
     
     function initEnemies(){
@@ -198,6 +199,7 @@ function isOnFloor() {
         for (i = 0; i < NumOfObjects; i++) {
             if ((player.Y + player.Height > Objects[i].Y - 0.11) && (player.Y < Objects[i].Y)){
                 if (((player.X + player.Width >= Objects[i].X) && (player.X <= Objects[i].X + Objects[i].Width))) {
+                    onObj = i
                     return("object")
                 }
             }
