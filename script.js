@@ -8,26 +8,26 @@ const maxSpeedX = 8;
 const maxSpeedY = 20;
 const EntityWidth = 71*1.2;
 const EntityHeight = 100*1.2;
-const NumOfObjects = 10;
-const maxEnemies = 2;
-const maxBullets = 100;
+const NumOfObjects = 1000;
+const maxEnemies = 50;
+const maxBullets = 1000;
 var song = new Audio('sounds/song.mp3');
 var pPics = []
 for (i = 1; i <= 6; i++) {
     pPics[i] = new Image()
     pPics[i].src = 'images/gg/gg' + i + '.png';
 }
-var hPics = []
+var pistolPics = []
 for (i = 1; i <= 7; i++) {
-    hPics[i] = new Image();
-    hPics[i].src = 'images/pistol/pistol' + i + '.png';
+    pistolPics[i] = new Image();
+    pistolPics.src = 'images/pistol/pistol' + i + '.png';
 }
+
 var ePic = new Image();
 ePic.src = 'images/bot.png';
 pPics.src
 {//Раздел переменных
 
-var ShotFrame = 10;
 var MoveFrame = 10;
 var Enemies = [];
 var bullet = [];
@@ -52,9 +52,21 @@ var mission = {
 }
 
 var allWeapons = [
-    {Name: '1', Damage: 1, Width: 62, Height: 22, Sprite: 'green'}, 
-    {Name: '2', Damage: 1, Width: 62, Height: 22, Sprite: 'white'}
+    {Name: 'pistol', Damage: 1, Width: 62, Height: 22, Sprite: [], maxFrames: 7, NF: 2, offsetX: 22}, 
+    {Name: 'm4', Damage: 1, Width: 96, Height: 33, Sprite: [], maxFrames: 11, NF: 5, offsetX: 30}
 ]
+
+for (i = 1; i <= 7; i++) {
+    allWeapons[0].Sprite[i] = new Image();
+    allWeapons[0].Sprite[i].src = 'images/pistol/pistol' + i + '.png';
+}
+
+for (i = 1; i <= 11; i++) {
+    allWeapons[1].Sprite[i] = new Image();
+    allWeapons[1].Sprite[i].src = 'images/m4/m4' + i + '.png';
+}
+
+
 
 var Player = {
     X: screenWidth / 2 - EntityHeight / 2,
@@ -62,18 +74,22 @@ var Player = {
     HP: 100,
     Height: EntityHeight,
     Width: EntityWidth,
-    Pics: [],
-    hPics: [],
+    Pics: pPics,
     SpeedX: 0,
     SpeedY: 0,
     left: 0,
     right: 0,
-    Weapon: allWeapons[0],
+    Weapon: allWeapons[1],
     AngleOfSight: 0,
-    offset: 0,
+    offsetX: allWeapons[1].offsetX,
+    ShotFrame: 10,
 }
-
     {//Раздел генерации и установок
+        ePic.onload = function() {
+            for (i = 0; i < maxEnemies; i++) {
+                Enemies[i].ePic = ePic; 
+            }
+        }
 
         function initAll() {
             initObjects();
@@ -94,6 +110,8 @@ var Player = {
         
         function initEnemies(){
             for (i = 0; i < maxEnemies; i++){
+                //NWeapon = Math.floor(randomNumber(0, 2))
+                NWeapon = 0
                 Enemies[i] = {
                     X: 250 * -i,
                     Y: 0,
@@ -101,28 +119,16 @@ var Player = {
                     ePic: new Image(),
                     Width: 40 * 1.2,
                     Height: EntityHeight,
-                    Weapon: allWeapons[Math.floor(randomNumber(0, 2))],
-                    AngleOfSight: 1,
+                    Weapon: allWeapons[NWeapon],
+                    AngleOfSight: 0,
                     SpeedY: 0,
-                    offset: 20,
+                    offsetX: allWeapons[NWeapon].offsetX,
+                    ShotFrame: 10,
                 }
             }
         }
 
-        ePic.onload = function() {
-            for (i = 0; i < maxEnemies; i++) {
-                Enemies[i].ePic = ePic; 
-            }
-        }
         
-        for (i = 1; i <= 6; i++) {
-            Player.Pics[i] = pPics[i]
-            console.log('images/' + i + 'gg.png')
-        }
-
-        for (i = 1; i <= 7; i++) {
-            Player.hPics[i] = hPics[i]
-        }
 
         function setWindow(){
             if ((document.fullscreenEnabled === true) && (document.fullscreenElement === null)) {
@@ -146,7 +152,13 @@ function initEventListeners() {
 }
 
 function onmousemove(event) {
-    Player.AngleOfSight = Math.asin(((Player.Y + 45) - event.clientY) / Math.sqrt(Math.pow(event.clientX - (Player.X + EntityWidth / 2), 2) + Math.pow(event.clientY - (Player.Y + 45), 2)))
+    Player.AngleOfSight = Math.asin(((Player.Y + 45) - event.clientY) / Math.sqrt(Math.pow(event.clientX - (Player.X + Player.Width / 2), 2) + Math.pow(event.clientY - (Player.Y + 45), 2)))
+    if (Player.AngleOfSight > 0.5) {
+        Player.AngleOfSight = 0.5
+    }
+    if (Player.AngleOfSight < -0.5) {
+        Player.AngleOfSight = -0.5
+    }
     MouseX = event.clientX;
 }
 
@@ -214,23 +226,26 @@ function drawAllObjects(){
 }
 
 function drawBackground() {
-    canvasContext.fillStyle = "black";
     canvasContext.drawImage(backGroundPic, 0, 0)
 }
 
 function drawPlayer() {
     canvasContext.save()
-    if (reflection(MouseX, Player.X + EntityWidth / 2)){
+    if (reflection(MouseX, Player.X + Player.Width / 2)){
         canvasContext.translate(Player.X, Player.Y);
         canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], 0, 0, Player.Width, Player.Height);
     } else {
-        canvasContext.translate(Player.X + EntityWidth / 2, Player.Y);
+        canvasContext.translate(Player.X + Player.Width / 2, Player.Y);
         canvasContext.scale(-1,1)
-        canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], -EntityWidth / 2, 0, Player.Width, Player.Height);
+        canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], - Player.Width / 2, 0, Player.Width, Player.Height);
         canvasContext.scale(-1,1)
     }
     canvasContext.restore()
-    drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + EntityWidth / 2), Player.offset)
+    if (Player.Weapon.Name == 'pistol') {
+        drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + Player.Width / 2), Player.offsetX, Player.ShotFrame, Player.Height, Player.Width, 0)
+    } else {
+        drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + Player.Width / 2), Player.offsetX, Player.ShotFrame, Player.Height, Player.Width, 10)
+    }
 }
 
 function drawEnemies() {
@@ -247,42 +262,39 @@ function drawEnemies() {
             canvasContext.scale(-1,1)
         }
         canvasContext.restore()
-        drawWeapon(Enemies[i].Weapon, Enemies[i].X, Enemies[i].Y, Enemies[i].AngleOfSight, reflection(Player.X + EntityWidth / 2, Enemies[i].X + EntityWidth / 2), Enemies[i].offset)
+        drawWeapon(Enemies[i].Weapon, Enemies[i].X, Enemies[i].Y, Enemies[i].AngleOfSight, reflection(Player.X + Player.Width / 2, Enemies[i].X + Player.Width / 2), Enemies[i].offsetX, Enemies[i].ShotFrame, Enemies[i].Height, Enemies[i].Width, 0)
     }
 }
 
-function drawWeapon(Weapon, X, Y, angle, isRefl, offset) {
-    canvasContext.fillStyle = Weapon.Sprite;
+function drawWeapon(Weapon, X, Y, angle, isRefl, offsetX, ShotFrame, Height, Width, offsetY) {
+    X = X + Width / 2
+    Y += Height - 70 - offsetY
     if (isRefl) {
-        X = X + EntityWidth / 4 - offset
-        Y = Y + 45 + offset / 2
         canvasContext.save()
-        canvasContext.translate(X, Y);
+        canvasContext.translate(X - offsetX, Y);
         canvasContext.rotate(-angle);
-        canvasContext.drawImage(Player.hPics[Math.round(ShotFrame / 10)], 0, 0, Weapon.Width, Weapon.Height);
+        canvasContext.drawImage(Weapon.Sprite[Math.floor(ShotFrame / 10)], 0, 0, Weapon.Width, Weapon.Height);
     }
     else {
-        X = X + EntityWidth / 1.3 - offset
-        Y = Y + 45 + offset / 2
         canvasContext.save()
-        canvasContext.translate(X, Y);
+        canvasContext.translate(X + offsetX, Y);
         canvasContext.scale(-1,1)
         canvasContext.rotate(-angle);
-        canvasContext.drawImage(Player.hPics[Math.round(ShotFrame / 10)], 0, 0, Weapon.Width, Weapon.Height);
+        canvasContext.drawImage(Weapon.Sprite[Math.floor(ShotFrame / 10)], 0, 0, Weapon.Width, Weapon.Height);
     }
     canvasContext.restore();
-    if (ShotFrame != 10) {
-        ShotFrame++
-        if (ShotFrame == 70) {
-            ShotFrame = 10
-        }
-    }
 }
-
 }//Конец раздела отрисовки
 
 function aimPlayer(Enemy) {
-    return(Math.asin(((Enemy.Y ) - Player.Y) / Math.sqrt(Math.pow(Player.X - (Enemy.X + EntityWidth / 2), 2) + Math.pow(Player.Y - (Enemy.Y + 45), 2))))
+    Angle = Math.asin(((Enemy.Y ) - Player.Y) / Math.sqrt(Math.pow(Player.X - (Enemy.X + Enemy.Width / 2), 2) + Math.pow(Player.Y - (Enemy.Y + 45), 2)))
+    if (Angle > 0.5) {
+        Angle = 0.5
+    }
+    if (Angle < -0.5) {
+        Angle = -0.5
+    }
+    return(Angle)
 }
 
 function reflection(X1, X2) {
@@ -418,10 +430,9 @@ function bulletMove() {
             bullet[b].X += Math.cos(Player.AngleOfSight) * Math.sign(MouseX - Player.X)
             bullet[b].Y -= Math.sin(Player.AngleOfSight)
             for (e = 0; e < maxEnemies; e++) {
-                if ((bullet[b].X >= Enemies[e].X) && (bullet[b].X <= Enemies[e].X + Enemies[e].Width) && (bullet[b].Y >= Enemies[e].Y) && (bullet[b].Y <= Enemies[e].Y + Enemies[e].Height)){
+                if ((bullet[b].X >= Enemies[e].X - Enemies[e].Width / 6) && (bullet[b].X <= Enemies[e].X + Enemies[e].Width) && (bullet[b].Y >= Enemies[e].Y) && (bullet[b].Y <= Enemies[e].Y + Enemies[e].Height)){
                     bullet[b].X = screenWidth + 1
                     Enemies[e].HP--
-                    console.log(Enemies[e].HP)
                 }
             }
             for (e = 0; e < NumOfObjects; e++) {
@@ -437,24 +448,24 @@ function bulletMove() {
 }
 
 function playerShoot() {
-    if (ShotFrame == 10) {
-        ShotFrame++
+    if (Player.ShotFrame == 10) {
+        Player.ShotFrame += Player.Weapon.NF
         bullet[bn] = {
             X: Player.X + Player.Width / 2 + Math.cos(Player.AngleOfSight) * Math.sign(MouseX - Player.X) * 50 - 25 * Math.sign(MouseX - Player.X) ,
-            Y: Player.Y + Player.Height / 2 - Math.sin(Player.AngleOfSight) * 50 - 10,
+            Y: Player.Y + Player.Height / 2 - Math.sin(Player.AngleOfSight) * 50 - 10 + Player.Weapon.offsetX / 10,
             Angle: Player.AngleOfSight,
             Speed: 100,
             shot: new Audio('sounds/shot.mp3'),
         }
         bullet[bn].shot.play()
         bn++
-        if (bn == maxBullets) {
+        if (bn > maxBullets) {
             bn = 0
         }
     }
 }
 
-function updateFrame() {
+function updateFrame(time) {
     //Тут потом будут двигаться крипы
     for (e=0; e < maxEnemies; e++){
         MoveY(Enemies[e])
@@ -463,15 +474,25 @@ function updateFrame() {
         }
     }
     PlayerMove()
+    if (Player.ShotFrame !== 10) {
+        Player.ShotFrame += Player.Weapon.NF
+        if (Player.ShotFrame == Player.Weapon.maxFrames * 10) {
+            Player.ShotFrame = 10
+        }
+    }
 }
+
+let lastDrawTime = Date.now();
 
 function play() {
     //startMission();
-    drawFrame();
     updateFrame();
+    drawFrame();
     requestAnimationFrame(play)
+    //song.play()
 }
 
 initAll();
 play();
 initEventListeners()
+
