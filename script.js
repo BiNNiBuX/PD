@@ -1,6 +1,6 @@
 var canvasContext = document.getElementById('canvas').getContext('2d')
 const screenWidth = window.screen.width
-const screenHeight = window.screen.height 
+const screenHeight = window.screen.height - window.screen.height * 0.215 
 const left = 'a'
 const right = 'd'
 const up = 'w'
@@ -8,11 +8,12 @@ const maxSpeedX = 8
 const maxSpeedY = 20
 const EntityWidth = 71*1.2
 const EntityHeight = 100*1.2
-const NumOfObjects = 1000
-const maxEnemies = 50
+const NumOfObjects = 18
+const maxEnemies = 10
 const maxBullets = 50
 const deathFrames = 9
 var song = new Audio('sounds/song.mp3')
+var loseSong = new Audio('sounds/loseSong.mp3')
 var pPics = []
 var click = 0
 for (i = 1; i <= 6; i++) {
@@ -26,7 +27,8 @@ for (i = 1; i <= 7; i++) {
 }
 
 {//Раздел переменных
-    var AllAmmo = 120
+    var Start = 0
+    var AllAmmo = 30
     var M4Ammo = 30
     var PistolAmmo = 7
     var MoveFrame = 10
@@ -63,6 +65,7 @@ for (i = 1; i <= 7; i++) {
         allWeapons[0].Sprite[i] = new Image()
         allWeapons[0].Sprite[i].src = 'images/pistol/pistol' + i + '.png'
     }
+
     for (i = 7 + 1; i <= 7 + 11; i++) { //Загрузка спрайтов анимации перезарядки пистолета
         allWeapons[0].Sprite[i] = new Image()
         allWeapons[0].Sprite[i].src = 'images/pistol/pistolReload/reload' + (i - 7)+ '.png'
@@ -81,7 +84,7 @@ for (i = 1; i <= 7; i++) {
     var Player = { //Игрок
         X: screenWidth / 2 - EntityHeight / 2,
         Y: 0,
-        HP: 100,
+        HP: 10,
         Height: EntityHeight,
         Width: EntityWidth,
         Pics: pPics,
@@ -93,6 +96,13 @@ for (i = 1; i <= 7; i++) {
         AngleOfSight: 0,
         offsetX: allWeapons[1].offsetX,
         ShotFrame: 10,
+        deathPics: []
+    }
+
+;    var Back = {
+        X: 0,
+        Y: 0,
+        Sprite: backGroundPic
     }
 
     function initEnemies(){ //Враги
@@ -125,22 +135,52 @@ for (i = 1; i <= 7; i++) {
     }
 
     function initObjects(){ //Объекты
-        for (let i=0; i<NumOfObjects; i++){
+        for (i=0; i<NumOfObjects; i++){
             Objects[i] = {
                 X: 100 * i * 4,
-                Y: 1080 - 400,
-                Width: 200,
+                Y: screenHeight - 200,
+                Width: 229,
                 Height: 30,
+                SpriteWidth: 229,
+                SpriteHeight: 0,
+                Sprite: 0,
             }   
         }
-        Objects[1]. Y = 1080 - 500
     }
 
     {//Раздел генерации и установок 
+        function startMission() {
+            Objects[15].Y -= 100
+            Objects[9].Y -= 50
+            Objects[10].Y -= 100
+            Objects[12].X += 1000
+            Objects[15].X += 50
+            Enemies[0].X = Objects[6].X
+            Enemies[1].X = Objects[7].X
+            Enemies[2].X = Objects[8].X
+            Enemies[3].X = Objects[9].X
+            Enemies[4].X = Objects[10].X
+            Enemies[6].X = Objects[11].X
+            Enemies[7].X = Objects[12].X
+            Enemies[8].X = Objects[13].X
+            Enemies[9].X = Objects[14].X
+            //Enemies[10].X = Objects[15].X
+            Enemies[0].Y = Objects[6].Y - 10
+            Enemies[1].Y = Objects[7].Y - 10
+            Enemies[2].Y = screenHeight
+            Enemies[3].Y = Objects[9].Y - 10
+            Enemies[4].Y = screenHeight
+            Enemies[6].Y = Objects[11].Y - 10 
+            Enemies[7].Y = Objects[12].Y - 10 
+            Enemies[8].Y = Objects[13].Y - 10
+            Enemies[9].Y = Objects[14].Y - 10
+            //Enemies[10].X = Objects[15].Y
+        }
 
         function initAll() {
             initObjects()
             initEnemies()
+            startMission()
             for (i = 0; i < maxEnemies; i++) {
                 Enemies[i].ePic[0] = new Image()
                 Enemies[i].ePic[0].src = 'images/bot.png'
@@ -149,6 +189,17 @@ for (i = 1; i <= 7; i++) {
                     Enemies[i].ePic[j].src = 'images/bot/death/death' + j + '.png'
                 }
             }
+            for (i = 0; i < NumOfObjects; i++) {
+                Objects[i].Sprite = new Image()
+                Objects[i].Sprite.src = 'images/platform.png'
+                Objects[i].SpriteHeight = screenHeight - Objects[i].Y
+                Objects[17].Height = screenHeight
+                Objects[17].Y = 0
+            }
+            for (i = 1; i < 12; i++) {
+                Player.deathPics[i] = new Image()
+                Player.deathPics[i].src = 'images/gg/death/death' + i + '.png'
+            }
         }
 
         function setWindow(){
@@ -156,7 +207,12 @@ for (i = 1; i <= 7; i++) {
                 document.documentElement.requestFullscreen() //Полноэкранный режим
             }
             canvas.width = screenWidth; //Ширина карты окна
-            canvas.height = screenHeight //Высота карты окна
+            canvas.height = screenHeight + 232 //Высота карты окна
+            spawnSound = new Audio("sounds/spawn" + Math.round(randomNumber(1, 5)) + ".mp3")
+            if (Start == 0) {
+                spawnSound.play()
+                Start = 1
+            }
         }
 
     }//Конец раздела генерации и установок
@@ -207,8 +263,8 @@ for (i = 1; i <= 7; i++) {
                 Player.SpeedX = -maxSpeedX
                 Player.left = 1
                 break
-            case up: 
-                if ((isOnFloor(Player) === "floor") || (isOnFloor(Player) === "object")) {
+            case up:
+                if ((isOnFloor(Player) === "floor") || (isOnFloor(Player) === "object") && (Player.HP > 0)) {
                     Player.SpeedY = maxSpeedY
                 }
                 break
@@ -258,44 +314,67 @@ for (i = 1; i <= 7; i++) {
 {//Раздел отрисовки
 
     function drawInterface() {
-
+        canvasContext.fillStyle = "rgb(0, 0, 0, 0.3)"
+        canvasContext.fillRect(0, screenHeight + 100, 800, 200)
+        canvasContext.fillStyle = "rgb(230, 230, 230)"
+        canvasContext.font = "bold 50px sans-serif"
+        if (Player.Weapon.Name == 'pistol') {
+            canvasContext.fillText(PistolAmmo + " / ထ", 130, screenHeight + 187.5)
+        }
+        if (Player.Weapon.Name == 'm4') {
+            canvasContext.fillText(M4Ammo + " / " + AllAmmo, 100, screenHeight + 187.5)
+        }
+            canvasContext.fillText("HP: " + Player.HP, 430,screenHeight + 187.5)
     }
-
+    
     function drawFrame() {
         drawBackground()
         drawPlayer()
         drawEnemies()
         drawAllObjects()
         bulletMove()
+        drawInterface()
     }
 
     function drawAllObjects(){
-        canvasContext.fillStyle = "white"
-        for (let i=0; i<NumOfObjects; i++){
-            canvasContext.fillRect(Objects[i].X, Objects[i].Y, Objects[i].Width, Objects[i].Height)
+        for (i=0; i<NumOfObjects; i++){
+            canvasContext.drawImage(Objects[i].Sprite, Objects[i].X, Objects[i].Y, Objects[i].SpriteWidth, Objects[i].SpriteHeight)
         }
     }
 
     function drawBackground() {
-        canvasContext.drawImage(backGroundPic, 0, 0)
+        canvasContext.drawImage(Back.Sprite, Back.X - 20, Back.Y, mission.Width + 1500, window.screen.height)
     }
 
     function drawPlayer() {
-        canvasContext.save()
-        if (reflection(MouseX, Player.X + Player.Width / 2)){
-            canvasContext.translate(Player.X, Player.Y)
-            canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], 0, 0, Player.Width, Player.Height)
+        if (Player.HP > 0) {
+            canvasContext.save()
+            if (reflection(MouseX, Player.X + Player.Width / 2)){
+                canvasContext.translate(Player.X, Player.Y)
+                canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], 0, 0, Player.Width, Player.Height)
+            } else {
+                canvasContext.translate(Player.X + Player.Width / 2, Player.Y)
+                canvasContext.scale(-1,1)
+                canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], - Player.Width / 2, 0, Player.Width, Player.Height)
+                canvasContext.scale(-1,1)
+            }
+            canvasContext.restore()
+            if (Player.Weapon.Name == 'pistol') {
+                drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + Player.Width / 2), Player.offsetX, Player.ShotFrame, Player.Height, Player.Width, 0)
+            } else {
+                drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + Player.Width / 2), Player.offsetX, Player.ShotFrame, Player.Height, Player.Width, 10)
+            }
         } else {
-            canvasContext.translate(Player.X + Player.Width / 2, Player.Y)
-            canvasContext.scale(-1,1)
-            canvasContext.drawImage(Player.Pics[Math.round(MoveFrame / 10)], - Player.Width / 2, 0, Player.Width, Player.Height)
-            canvasContext.scale(-1,1)
-        }
-        canvasContext.restore()
-        if (Player.Weapon.Name == 'pistol') {
-            drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + Player.Width / 2), Player.offsetX, Player.ShotFrame, Player.Height, Player.Width, 0)
-        } else {
-            drawWeapon(Player.Weapon, Player.X, Player.Y, Player.AngleOfSight, reflection(MouseX, Player.X + Player.Width / 2), Player.offsetX, Player.ShotFrame, Player.Height, Player.Width, 10)
+            if (MoveFrame == 10){
+                Player.Width = 121
+            Player.Height = 104
+            Player.Y += EntityHeight - Player.Height 
+            }
+            canvasContext.drawImage(Player.deathPics[Math.round(MoveFrame / 10)], Player.X, Player.Y, Player.Width, Player.Height)
+            MoveFrame++
+            if (MoveFrame > 110){
+                MoveFrame = 110
+            }
         }
     }
 
@@ -369,11 +448,11 @@ for (i = 1; i <= 7; i++) {
     function reload() {
         if (Player.Weapon.Name == 'm4') {
             Player.ShotFrame = (11 + 1) * 10
-            if (AllAmmo >= 30) {
+            if (AllAmmo + M4Ammo >= 30) {
                 AllAmmo -= 30 - M4Ammo
                 M4Ammo = 30
             } else {
-                M4Ammo = AllAmmo
+                M4Ammo += AllAmmo
                 AllAmmo = 0
             }
         }
@@ -444,51 +523,74 @@ for (i = 1; i <= 7; i++) {
         } else {
             MoveFrame = 10
         }
-        if (Player.SpeedX < 0) {
-            for (i = Player.SpeedX; i != 0; i+=1) {
-                if (!isCollision(Player)){
-                    for (j = 0; j < maxEnemies; j++){
-                        Enemies[j].X++
+        if (Math.abs(Back.X - Player.X) <= screenWidth / 2 - EntityHeight / 2) {
+            Back.X = 0
+            Player.X += Player.SpeedX
+            if (isCollision(Player)) {
+                Player.X -= Player.SpeedX
+            }
+        } else {
+            if (Math.abs(Back.X) >= mission.Width - Player.X) {
+                if (Math.abs(Back.X) > mission.Width - 909) {
+                    Back.X += 8
+                }
+                Player.X += Player.SpeedX
+                if (isCollision(Player)) {
+                    Player.X -= Player.SpeedX
+                }
+                
+            } else {
+                if (Player.SpeedX < 0) {
+                    for (i = Player.SpeedX; i != 0; i+=1) {
+                        if (!isCollision(Player)){
+                            Back.X++
+                            for (j = 0; j < maxEnemies; j++){
+                                Enemies[j].X++
+                            }
+                            for (j = 0; j < NumOfObjects; j++){
+                                Objects[j].X++
+                            }
+                        }
                     }
-                    for (j = 0; j < NumOfObjects; j++){
-                        Objects[j].X++
+                }
+                if (Player.SpeedX > 0) {
+                    for (i = Player.SpeedX; i != 0; i-=1) {
+                        if (!isCollision(Player)){
+                            Back.X--
+                            for (j = 0; j < maxEnemies; j++){
+                                Enemies[j].X--
+                            }
+                            for (j = 0; j < NumOfObjects; j++){
+                                Objects[j].X--
+                            }
+                        }
                     }
+                }
+                if (isCollision(Player)) {
+                    if (Player.SpeedX < 0) {
+                        Back.X-=2
+                        for (i = Player.SpeedX; i != 0; i+=1) {
+                            for (j = 0; j < maxEnemies; j++) {
+                                Enemies[j].X-=0.25
+                            }
+                            for (j = 0; j < NumOfObjects; j++) {
+                                Objects[j].X-=0.25
+                            }
+                        }
+                    }
+                    if (Player.SpeedX > 0) {
+                        Back.X+=2
+                        for (i = Player.SpeedX; i != 0; i-=1) {
+                            for (j = 0; j < maxEnemies; j++) {
+                                Enemies[j].X+=0.25
+                            }
+                            for (j = 0; j < NumOfObjects; j++) {
+                                Objects[j].X+=0.25
+                            }
+                        }
+                    } 
                 }
             }
-        }
-        if (Player.SpeedX > 0) {
-            for (i = Player.SpeedX; i != 0; i-=1) {
-                if (!isCollision(Player)){
-                    for (j = 0; j < maxEnemies; j++){
-                        Enemies[j].X--
-                    }
-                    for (j = 0; j < NumOfObjects; j++){
-                        Objects[j].X--
-                    }
-                }
-            }
-        }
-        if (isCollision(Player)) {
-            if (Player.SpeedX < 0) {
-                for (i = Player.SpeedX; i != 0; i+=1) {
-                    for (j = 0; j < maxEnemies; j++) {
-                        Enemies[j].X-=0.25
-                    }
-                    for (j = 0; j < NumOfObjects; j++) {
-                        Objects[j].X-=0.25
-                    }
-                }
-            }
-            if (Player.SpeedX > 0) {
-                for (i = Player.SpeedX; i != 0; i-=1) {
-                    for (j = 0; j < maxEnemies; j++) {
-                        Enemies[j].X+=0.25
-                    }
-                    for (j = 0; j < NumOfObjects; j++) {
-                        Objects[j].X+=0.25
-                    }
-                }
-            } 
         }
     }
     
@@ -499,7 +601,7 @@ for (i = 1; i <= 7; i++) {
                 Entity.Y = Objects[onObj].Y + Objects[onObj].Height + 1
                 Entity.SpeedY = 0
             } else {
-                Entity.SpeedY -= 0.5 
+                Entity.SpeedY -= 1
             }
         } else {
             if (isOnFloor(Entity) === "floor"){
@@ -534,6 +636,9 @@ for (i = 1; i <= 7; i++) {
                     if ((bullet[b].X >= Player.X - Player.Width / 6) && (bullet[b].X <= Player.X + Player.Width) && (bullet[b].Y >= Player.Y) && (bullet[b].Y <= Player.Y + Player.Height) && (Player.HP > 0)){
                         bullet[b].X = screenWidth + 1
                         Player.HP--
+                        if (Player.HP == 0) {
+                            MoveFrame = 10
+                        }
                     }
                 }
                 for (e = 0; e < NumOfObjects; e++) {
@@ -589,7 +694,7 @@ for (i = 1; i <= 7; i++) {
         if (Enemies[index].HP <= 0){
             return(false)
         }
-        if (Math.abs(Player.X - Enemies[index].X) < screenWidth / 2) {
+        if (Math.abs(Player.X + Player.Width / 2 - Enemies[index].X) < screenWidth / 2 + 100) {
             return(true)
         }
         return(false)
@@ -598,7 +703,13 @@ for (i = 1; i <= 7; i++) {
     function moveEnemy(Enemy) {
         Enemy.X += Enemy.SpeedX
         if (isCollision(Enemy)){
-            Enemy.SpeedX = -Enemy.SpeedX
+            Enemy.X -= Enemy.SpeedX
+            Enemy.SpeedX = 0
+        }
+        if (Enemy.SpeedX == 0) {
+            if (Math.round(randomNumber(0, 3)) == 3) {
+                Enemy.SpeedX = maxSpeedX 
+            }
         }
         if (Math.round(randomNumber(0, 50)) == 50) {
             Enemy.SpeedX = -Enemy.SpeedX
@@ -644,7 +755,9 @@ function updateFrame() {
         MoveY(Enemies[e])
         Enemies[e].Active = isActive(e)
         if (Enemies[e].Active == true) {
-            moveEnemy(Enemies[e])
+            if ((e != 9) && (e != 10) && (e != 6)) {
+                moveEnemy(Enemies[e])
+            }
             enemyShoot(e)
         }
     }
@@ -672,14 +785,24 @@ function updateFrame() {
 }
 
 function play() {
-    Objects[0].Height = 500
-    Objects[0].Width = 10
-    updateFrame()
     drawFrame()
     requestAnimationFrame(play)
-    //song.play()
+    if (Player.HP != 0) {
+        //song.play()
+        updateFrame()
+    } else {
+        //loseSong.play()
+        MoveY(Player)
+        for (e=0; e < maxEnemies; e++){
+            MoveY(Enemies[e])
+        }
+        if (Start == 1) {
+            deathSound = new Audio("sounds/death" + Math.round(randomNumber(1, 4)) + ".mp3")
+            deathSound.play()
+            Start = 2
+        }
+    }
 }
-
 initAll()
-play()
 initEventListeners()
+play()
